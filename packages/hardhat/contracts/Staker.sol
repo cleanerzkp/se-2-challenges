@@ -48,7 +48,12 @@ function execute() public {
 
 
   // Add a `timeLeft()` view function that returns the time left before the deadline for the frontend
-
+function timeLeft() public view returns (uint256) {
+  if (block.timestamp >= deadline) {
+    return 0;
+  }
+  return deadline - block.timestamp;
+} 
 
   // Add the `receive()` special function that receives eth and calls stake()
 
