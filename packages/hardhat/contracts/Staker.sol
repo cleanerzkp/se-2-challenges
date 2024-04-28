@@ -18,7 +18,7 @@ contract Staker {
     event Stake(address indexed staker, uint256 amount);
 
     // Deadline for the staking period
-    uint256 public deadline = block.timestamp + 30 seconds;
+    uint256 public deadline = block.timestamp + 72 hours;
 
     // Flag to indicate if users can withdraw their funds
     bool public openForWithdraw = false;
