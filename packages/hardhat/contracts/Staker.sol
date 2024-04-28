@@ -31,8 +31,6 @@ function stake() public payable {
 uint256 public deadline = block.timestamp + 30 seconds;
 
 function execute() public {
-    console.log("block.timestamp: %s", block.timestamp);
-    console.log("deadline: %s", deadline);
 
     require(block.timestamp >= deadline, "Deadline not reached");
     require(address(this).balance >= threshold, "Threshold not met");
@@ -55,6 +53,9 @@ function timeLeft() public view returns (uint256) {
   return deadline - block.timestamp;
 } 
 
+receive() external payable {
+  stake();
+}
   // Add the `receive()` special function that receives eth and calls stake()
 
 }
