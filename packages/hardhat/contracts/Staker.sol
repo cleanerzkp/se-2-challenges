@@ -24,9 +24,21 @@ function stake() public payable {
     emit Stake(msg.sender, msg.value);
 }
 
+
   // Collect funds in a payable `stake()` function and track individual `balances` with a mapping:
   // (Make sure to add a `Stake(address,uint256)` event and emit it for the frontend `All Stakings` tab to display)
 
+uint256 public deadline = block.timestamp + 30 seconds;
+
+function execute() public {
+    console.log("block.timestamp: %s", block.timestamp);
+    console.log("deadline: %s", deadline);
+
+    require(block.timestamp >= deadline, "Deadline not reached");
+    require(address(this).balance >= threshold, "Threshold not met");
+
+    exampleExternalContract.complete{value: address(this).balance}();
+}
 
   // After some `deadline` allow anyone to call an `execute()` function
   // If the deadline has passed and the threshold is met, it should call `exampleExternalContract.complete{value: address(this).balance}()`
