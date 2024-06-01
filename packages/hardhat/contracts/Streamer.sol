@@ -14,6 +14,10 @@ contract Streamer is Ownable {
   mapping(address => uint256) canCloseAt;
 
   function fundChannel() public payable {
+
+    require(balances[msg.sender] == 0, "msg.sender already has a running channel");
+    balances[msg.sender] = msg.value;
+    emit Opened(msg.sender, msg.value);
     /*
       Checkpoint 2: fund a channel
 
@@ -32,7 +36,7 @@ contract Streamer is Ownable {
     return canCloseAt[channel] - block.timestamp;
   }
 
-  function withdrawEarnings(Voucher calldata voucher) public {
+  function withdrawEarnings(Voucher calldata voucher) public onlyOwner {
     // like the off-chain code, signatures are applied to the hash of the data
     // instead of the raw data itself
     bytes32 hashed = keccak256(abi.encode(voucher.updatedBalance));
@@ -59,6 +63,27 @@ contract Streamer is Ownable {
           - adjust the channel balance, and pay the Guru(Contract owner). Get the owner address with the `owner()` function.
           - emit the Withdrawn event
     */
+       // Recover the signer
+    address signer = ecrecover(prefixedHashed, voucher.sig.v, voucher.sig.r, voucher.sig.s);
+    require(signer != address(0), "Invalid signature");
+
+    // Ensure the signer has a running channel with sufficient balance
+    uint256 currentBalance = balances[signer];
+    require(currentBalance > voucher.updatedBalance, "Insufficient channel balance");
+
+    // Calculate the payout
+    uint256 payout = currentBalance - voucher.updatedBalance;
+
+    // Update the channel balance
+    balances[signer] = voucher.updatedBalance;
+
+    // Send the payout to the Guru (contract owner)
+    address payable guru = payable(owner());
+    (bool success, ) = guru.call{value: payout}("");
+    require(success, "Transfer to Guru failed");
+
+    // Emit the Withdrawn event
+    emit Withdrawn(signer, payout);
   }
 
   /*
@@ -69,6 +94,35 @@ contract Streamer is Ownable {
     - updates canCloseAt[msg.sender] to some future time
     - emits a Challenged event
   */
+  function challengeChannel() public {
+
+    require(balances[msg.sender] > 0, "Open channel first dummy");
+    canCloseAt[msg.sender] = block.timestamp + 30 seconds;
+    emit Challenged(msg.sender);
+
+
+   }
+   
+   function defundChannel() public payable {
+    require(canCloseAt[msg.sender] != 0, "Channel not set for closing");
+    require(block.timestamp >= canCloseAt[msg.sender], "Channel closing time not reached");
+
+        uint256 balance = balances[msg.sender];
+        balances[msg.sender] = 0; // Set the balance to 0 before sending to prevent reentrancy
+        canCloseAt[msg.sender] = 0; // Reset the closing time
+
+        (bool success, ) = msg.sender.call{value: balance}("");
+        require(success, "Transfer failed");
+
+        emit Closed(msg.sender);
+
+
+  }
+
+
+
+
+
 
   /*
     Checkpoint 5b: Close the channel
